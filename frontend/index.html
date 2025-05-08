@@ -34,27 +34,39 @@
   <section class="max-w-4xl mx-auto mt-12 bg-white rounded-xl shadow-md p-8">
     <h1 class="text-3xl font-bold text-gray-800 mb-4">PDF Background Changer</h1>
     <div class="alert alert-primary mb-4" role="alert">
-      This tool allows you to upload a PDF and change its background color directly in your browser.
+      This tool allows you to upload multiple PDFs and change their background color directly in your browser.
       <strong>No files are uploaded to any server; all processing happens locally for your privacy.</strong>
     </div>
     <div class="alert alert-info mb-6" role="alert">
-      Upload a PDF, pick a background color, and download your updated PDF. All processing happens in your browser.
+      Upload PDFs, pick a background color, and download your updated PDFs. All processing happens in your browser.
     </div>
     <div class="flex flex-col md:flex-row gap-8">
       <!-- Left: PDF Form and Controls -->
       <div class="md:w-2/3 w-full">
         <form id="pdfForm" class="mb-8 space-y-4">
           <div>
-            <label for="inputPdf" class="form-label">Input PDF</label>
-            <input type="file" class="form-control" id="inputPdf" accept="application/pdf" required>
+            <label for="inputPdf" class="form-label">Input PDFs</label>
+            <input type="file" class="form-control" id="inputPdf" accept="application/pdf" multiple required>
+            <div class="form-text">You can select multiple PDF files at once.</div>
+            <div id="selectedFiles" class="mt-3 d-none">
+              <h5 class="mb-2">Selected Files:</h5>
+              <ul class="list-group" id="filesList"></ul>
+            </div>
           </div>
           <div class="flex items-center gap-3">
             <label for="bgColor" class="form-label">Background Color</label>
             <input type="color" class="form-control form-control-color" id="bgColor" value="#B8C7AE" title="Choose background color">
           </div>
-          <button type="submit" class="btn btn-success w-100">Change Background & Download</button>
+          <button type="submit" class="btn btn-success w-100">Change Background & Download All</button>
         </form>
         <div id="status" class="mb-4"></div>
+        <div id="progressContainer" class="mb-4 d-none">
+          <h4 class="text-lg font-semibold">Processing Files</h4>
+          <div class="progress mb-2">
+            <div id="totalProgress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+          </div>
+          <div id="fileStatusList" class="mt-2 text-sm"></div>
+        </div>
         <div class="text-gray-500 text-xs mt-6">
           Powered by <a href="https://pdf-lib.js.org/" class="text-blue-600 underline" target="_blank">pdf-lib</a>. Only the background color is changed; all other content remains untouched.
         </div>
@@ -146,20 +158,53 @@
       statusDiv.innerHTML = '';
       const fileInput = document.getElementById('inputPdf');
       const colorInput = document.getElementById('bgColor');
-      const file = fileInput.files[0];
-      if (!file) {
-        statusDiv.innerHTML = '<div class="alert alert-danger">Please select a PDF file.</div>';
+      const files = fileInput.files;
+      
+      if (!files || files.length === 0) {
+        statusDiv.innerHTML = '<div class="alert alert-danger">Please select at least one PDF file.</div>';
         return;
       }
-      const reader = new FileReader();
-      reader.onload = async function(ev) {
+      
+      // Show progress container
+      const progressContainer = document.getElementById('progressContainer');
+      const totalProgress = document.getElementById('totalProgress');
+      const fileStatusList = document.getElementById('fileStatusList');
+      progressContainer.classList.remove('d-none');
+      fileStatusList.innerHTML = '';
+      
+      // Create status elements for each file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileItem = document.createElement('div');
+        fileItem.className = 'mb-1';
+        fileItem.innerHTML = `
+          <span class="font-semibold">${file.name}</span>
+          <span id="status-${i}" class="badge bg-secondary ms-2">Waiting</span>
+        `;
+        fileStatusList.appendChild(fileItem);
+      }
+      
+      let completedCount = 0;
+      const hexColor = colorInput.value;
+      const rgb = hexToRgb01(hexColor);
+      
+      // Process each file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const statusBadge = document.getElementById(`status-${i}`);
+        statusBadge.className = 'badge bg-primary ms-2';
+        statusBadge.textContent = 'Processing';
+        
         try {
-          const uint8Array = new Uint8Array(ev.target.result);
+          // Read the file
+          const arrayBuffer = await readFileAsArrayBuffer(file);
+          const uint8Array = new Uint8Array(arrayBuffer);
+          
+          // Load the PDF
           const pdfDoc = await PDFLib.PDFDocument.load(uint8Array);
           const pages = pdfDoc.getPages();
-          const hexColor = colorInput.value;
-          const rgb = hexToRgb01(hexColor);
-
+          
+          // Apply background to each page
           for (const page of pages) {
             const { width, height } = page.getSize();
             const rectOptions = {
@@ -175,7 +220,8 @@
             };
             page.drawRectangle(rectOptions);
           }
-
+          
+          // Save and download the PDF
           const pdfBytes = await pdfDoc.save();
           const blob = new Blob([pdfBytes], { type: 'application/pdf' });
           const url = URL.createObjectURL(blob);
@@ -188,13 +234,39 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
           }, 100);
-          statusDiv.innerHTML = '<div class="alert alert-success">PDF processed! Download should begin automatically.</div>';
+          
+          statusBadge.className = 'badge bg-success ms-2';
+          statusBadge.textContent = 'Completed';
         } catch (err) {
-          statusDiv.innerHTML = '<div class="alert alert-danger">Failed to process PDF: ' + err.message + '</div>';
+          statusBadge.className = 'badge bg-danger ms-2';
+          statusBadge.textContent = 'Failed';
+          console.error(`Error processing ${file.name}:`, err);
         }
-      };
-      reader.readAsArrayBuffer(file);
+        
+        // Update progress
+        completedCount++;
+        const progressPercentage = Math.round((completedCount / files.length) * 100);
+        totalProgress.style.width = progressPercentage + '%';
+        totalProgress.setAttribute('aria-valuenow', progressPercentage);
+      }
+      
+      // Show final status message
+      if (completedCount === files.length) {
+        statusDiv.innerHTML = `<div class="alert alert-success">All ${files.length} PDFs processed! Downloads should begin automatically.</div>`;
+      } else {
+        statusDiv.innerHTML = `<div class="alert alert-warning">Processed ${completedCount} out of ${files.length} PDFs. Check console for errors.</div>`;
+      }
     });
+    
+    // Helper function to read file as ArrayBuffer
+    function readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target.result);
+        reader.onerror = (err) => reject(err);
+        reader.readAsArrayBuffer(file);
+      });
+    }
 
     function hexToRgb01(hex) {
       // Convert #RRGGBB to {r,g,b} in [0,1]
@@ -209,10 +281,15 @@
     }
   </script>
   <script>
-    // Quick Color Presets click handler
+    // Quick Color Presets click handler and file input handler
     document.addEventListener('DOMContentLoaded', function () {
       const presetBtns = document.querySelectorAll('.preset-btn');
       const colorInput = document.getElementById('bgColor');
+      const fileInput = document.getElementById('inputPdf');
+      const selectedFilesDiv = document.getElementById('selectedFiles');
+      const filesList = document.getElementById('filesList');
+      
+      // Handle color preset buttons
       presetBtns.forEach(btn => {
         btn.addEventListener('click', function () {
           const hex = btn.getAttribute('data-hex');
@@ -220,6 +297,46 @@
           colorInput.dispatchEvent(new Event('input', { bubbles: true }));
         });
       });
+      
+      // Display selected files when the file input changes
+      fileInput.addEventListener('change', function() {
+        const files = this.files;
+        
+        // Clear the files list
+        filesList.innerHTML = '';
+        
+        if (files.length > 0) {
+          selectedFilesDiv.classList.remove('d-none');
+          
+          // Add each file to the list with its size
+          Array.from(files).forEach((file, index) => {
+            const fileSize = formatFileSize(file.size);
+            const listItem = document.createElement('li');
+            listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+            listItem.innerHTML = `
+              <div>
+                <span class="badge bg-primary rounded-pill me-2">${index + 1}</span>
+                ${file.name}
+              </div>
+              <span class="badge bg-secondary">${fileSize}</span>
+            `;
+            filesList.appendChild(listItem);
+          });
+        } else {
+          selectedFilesDiv.classList.add('d-none');
+        }
+      });
+      
+      // Helper function to format file size
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
     });
   </script>
   <div class="max-w-4xl mx-auto mt-10 mb-4">
