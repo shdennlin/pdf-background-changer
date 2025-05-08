@@ -1,5 +1,6 @@
 {
   "name": "pdf-background-changer",
+  "version": "v1.0.0",
   "module": "index.ts",
   "type": "module",
   "private": true,

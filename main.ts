@@ -41,7 +41,9 @@ async function changePdfBackground(inputPath: string, outputPath: string, colorH
  */
 
 function printHelpAndExit() {
-  console.log(`Usage: bun run main.ts <input.pdf> <output.pdf> <backgroundColor>
+  console.log(`PDF Background Changer version 1.0.0
+
+Usage: bun run main.ts <input.pdf> <output.pdf> <backgroundColor>
 Example:
   bun run main.ts input.pdf output.pdf "#B8C7AE"
 
@@ -52,6 +54,7 @@ Parameters:
 
 Flags:
   -h, --help          Show this help message and exit
+  -v, --version       Show version information and exit
 `);
   process.exit(0);
 }
@@ -59,6 +62,10 @@ Flags:
 if (require.main === module) {
   if (process.argv.includes("-h") || process.argv.includes("--help")) {
     printHelpAndExit();
+  }
+  if (process.argv.includes("-v") || process.argv.includes("--version")) {
+    console.log("v1.0.0");
+    process.exit(0);
   }
   const [,, inputPath, outputPath, colorHex] = process.argv;
   if (!inputPath || !outputPath || !colorHex) {
