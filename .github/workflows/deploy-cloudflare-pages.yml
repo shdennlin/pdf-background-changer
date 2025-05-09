@@ -22,6 +22,12 @@ jobs:
 
       - name: Build frontend
         run: cd packages/frontend && bun run build
+      
+      - name: Copy static assets to dist
+        run: |
+          cp packages/frontend/index.html packages/frontend/dist/
+          cp -r packages/frontend/css packages/frontend/dist/
+          cp -r packages/frontend/img packages/frontend/dist/
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
