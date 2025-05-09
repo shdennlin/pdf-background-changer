@@ -37,6 +37,7 @@ let fileInput: HTMLInputElement;
 let colorInput: HTMLInputElement;
 let selectedFilesDiv: HTMLElement;
 let filesList: HTMLElement;
+let allFiles: File[] = []; // Store all selected files
 
 /**
  * Initialize the application once the DOM is loaded
@@ -204,14 +205,43 @@ async function processFile(file: File, index: number, hexColor: string): Promise
 function handleFileInputChange() {
   const files = fileInput.files;
   
-  // Clear the files list
-  filesList.innerHTML = '';
-  
   if (files && files.length > 0) {
     selectedFilesDiv.classList.remove('d-none');
     
-    // Add each file to the list with its size
-    Array.from(files).forEach((file, index) => {
+    // Append new files to the existing list
+    Array.from(files).forEach(file => {
+      if (!allFiles.some(f => f.name === file.name && f.size === file.size)) {
+        allFiles.push(file);
+      }
+    });
+    
+    // Update the file input with all files
+    updateFileInput();
+    
+    // Refresh the displayed list
+    refreshFileList();
+  } else {
+    selectedFilesDiv.classList.add('d-none');
+  }
+}
+
+/**
+ * Update the file input with the current list of files
+ */
+function updateFileInput() {
+  const dataTransfer = new DataTransfer();
+  allFiles.forEach(file => dataTransfer.items.add(file));
+  fileInput.files = dataTransfer.files;
+}
+
+/**
+ * Refresh the displayed list of files
+ */
+function refreshFileList() {
+  filesList.innerHTML = '';
+  
+  if (allFiles.length > 0) {
+    allFiles.forEach((file, index) => {
       const fileSize = formatFileSize(file.size);
       const listItem = document.createElement('li');
       listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
@@ -220,12 +250,34 @@ function handleFileInputChange() {
           <span class="badge bg-primary rounded-pill me-2">${index + 1}</span>
           ${file.name}
         </div>
-        <span class="badge bg-secondary">${fileSize}</span>
+        <div>
+          <span class="badge bg-secondary me-2">${fileSize}</span>
+          <button type="button" class="btn btn-danger btn-sm delete-btn" data-index="${index}">Delete</button>
+        </div>
       `;
       filesList.appendChild(listItem);
     });
+    
+    // Add event listeners to delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', handleDeleteFile);
+    });
   } else {
     selectedFilesDiv.classList.add('d-none');
+  }
+}
+
+/**
+ * Handle file deletion
+ */
+function handleDeleteFile(e: Event) {
+  const button = e.target as HTMLElement;
+  const index = parseInt(button.getAttribute('data-index') || '-1', 10);
+  
+  if (index >= 0 && index < allFiles.length) {
+    allFiles.splice(index, 1);
+    updateFileInput();
+    refreshFileList();
   }
 }
 
