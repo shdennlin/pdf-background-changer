@@ -1,0 +1,24 @@
+{
+  "name": "@pdf-background-changer/frontend",
+  "version": "1.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build:ts": "bun build ./src/ts/app.ts --outdir ./dist",
+    "build:css": "echo 'Skipping CSS build - using prebuilt styles.css'",
+    "build:css:watch": "echo 'CSS watch mode not available - using prebuilt styles.css'",
+    "build": "bun run build:ts",
+    "dev:ts": "bun build ./src/ts/app.ts --outdir ./dist --watch",
+    "dev": "bun run build && bun run dev:ts",
+    "serve": "bun --hot index.html"
+  },
+  "dependencies": {
+    "@pdf-background-changer/lib": "workspace:*"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.5",
+    "@types/bun": "latest"
+  }
+}

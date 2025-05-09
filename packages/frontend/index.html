@@ -4,8 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PDF Background Changer</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="./img/favicon.png">
+  <link rel="shortcut icon" href="./img/favicon.png">
+  <!-- Production Tailwind CSS -->
+  <link href="./css/styles.css" rel="stylesheet">
   <!-- Bootstrap CSS CDN -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
@@ -147,205 +150,19 @@
 
   <!-- pdf-lib CDN -->
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+  
   <!-- Bootstrap JS Bundle (for navbar toggling) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    const form = document.getElementById('pdfForm');
-    const statusDiv = document.getElementById('status');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      statusDiv.innerHTML = '';
-      const fileInput = document.getElementById('inputPdf');
-      const colorInput = document.getElementById('bgColor');
-      const files = fileInput.files;
-      
-      if (!files || files.length === 0) {
-        statusDiv.innerHTML = '<div class="alert alert-danger">Please select at least one PDF file.</div>';
-        return;
-      }
-      
-      // Show progress container
-      const progressContainer = document.getElementById('progressContainer');
-      const totalProgress = document.getElementById('totalProgress');
-      const fileStatusList = document.getElementById('fileStatusList');
-      progressContainer.classList.remove('d-none');
-      fileStatusList.innerHTML = '';
-      
-      // Create status elements for each file
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileItem = document.createElement('div');
-        fileItem.className = 'mb-1';
-        fileItem.innerHTML = `
-          <span class="font-semibold">${file.name}</span>
-          <span id="status-${i}" class="badge bg-secondary ms-2">Waiting</span>
-        `;
-        fileStatusList.appendChild(fileItem);
-      }
-      
-      let completedCount = 0;
-      const hexColor = colorInput.value;
-      const rgb = hexToRgb01(hexColor);
-      
-      // Process each file
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const statusBadge = document.getElementById(`status-${i}`);
-        statusBadge.className = 'badge bg-primary ms-2';
-        statusBadge.textContent = 'Processing';
-        
-        try {
-          // Read the file
-          const arrayBuffer = await readFileAsArrayBuffer(file);
-          const uint8Array = new Uint8Array(arrayBuffer);
-          
-          // Load the PDF
-          const pdfDoc = await PDFLib.PDFDocument.load(uint8Array);
-          const pages = pdfDoc.getPages();
-          
-          // Apply background to each page
-          for (const page of pages) {
-            const { width, height } = page.getSize();
-            const rectOptions = {
-              x: 0,
-              y: 0,
-              width,
-              height,
-              color: PDFLib.rgb(rgb.r, rgb.g, rgb.b),
-              opacity: 1,
-              borderWidth: 0,
-              // Draw below all content
-              blendMode: PDFLib.BlendMode.Multiply,
-            };
-            page.drawRectangle(rectOptions);
-          }
-          
-          // Save and download the PDF
-          const pdfBytes = await pdfDoc.save();
-          const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = file.name.replace(/\.pdf$/i, '') + '-bg.pdf';
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          }, 100);
-          
-          statusBadge.className = 'badge bg-success ms-2';
-          statusBadge.textContent = 'Completed';
-        } catch (err) {
-          statusBadge.className = 'badge bg-danger ms-2';
-          statusBadge.textContent = 'Failed';
-          console.error(`Error processing ${file.name}:`, err);
-        }
-        
-        // Update progress
-        completedCount++;
-        const progressPercentage = Math.round((completedCount / files.length) * 100);
-        totalProgress.style.width = progressPercentage + '%';
-        totalProgress.setAttribute('aria-valuenow', progressPercentage);
-      }
-      
-      // Show final status message
-      if (completedCount === files.length) {
-        statusDiv.innerHTML = `<div class="alert alert-success">All ${files.length} PDFs processed! Downloads should begin automatically.</div>`;
-      } else {
-        statusDiv.innerHTML = `<div class="alert alert-warning">Processed ${completedCount} out of ${files.length} PDFs. Check console for errors.</div>`;
-      }
-    });
-    
-    // Helper function to read file as ArrayBuffer
-    function readFileAsArrayBuffer(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => resolve(ev.target.result);
-        reader.onerror = (err) => reject(err);
-        reader.readAsArrayBuffer(file);
-      });
-    }
-
-    function hexToRgb01(hex) {
-      // Convert #RRGGBB to {r,g,b} in [0,1]
-      let c = hex.replace('#', '');
-      if (c.length === 3) c = c.split('').map(x => x + x).join('');
-      const num = parseInt(c, 16);
-      return {
-        r: ((num >> 16) & 255) / 255,
-        g: ((num >> 8) & 255) / 255,
-        b: (num & 255) / 255
-      };
-    }
-  </script>
-  <script>
-    // Quick Color Presets click handler and file input handler
-    document.addEventListener('DOMContentLoaded', function () {
-      const presetBtns = document.querySelectorAll('.preset-btn');
-      const colorInput = document.getElementById('bgColor');
-      const fileInput = document.getElementById('inputPdf');
-      const selectedFilesDiv = document.getElementById('selectedFiles');
-      const filesList = document.getElementById('filesList');
-      
-      // Handle color preset buttons
-      presetBtns.forEach(btn => {
-        btn.addEventListener('click', function () {
-          const hex = btn.getAttribute('data-hex');
-          colorInput.value = hex;
-          colorInput.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-      });
-      
-      // Display selected files when the file input changes
-      fileInput.addEventListener('change', function() {
-        const files = this.files;
-        
-        // Clear the files list
-        filesList.innerHTML = '';
-        
-        if (files.length > 0) {
-          selectedFilesDiv.classList.remove('d-none');
-          
-          // Add each file to the list with its size
-          Array.from(files).forEach((file, index) => {
-            const fileSize = formatFileSize(file.size);
-            const listItem = document.createElement('li');
-            listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
-            listItem.innerHTML = `
-              <div>
-                <span class="badge bg-primary rounded-pill me-2">${index + 1}</span>
-                ${file.name}
-              </div>
-              <span class="badge bg-secondary">${fileSize}</span>
-            `;
-            filesList.appendChild(listItem);
-          });
-        } else {
-          selectedFilesDiv.classList.add('d-none');
-        }
-      });
-      
-      // Helper function to format file size
-      function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-      }
-    });
-  </script>
+  
+  <!-- Application JavaScript -->
+  <script type="module" src="./dist/app.js"></script>
   <div class="max-w-4xl mx-auto mt-10 mb-4">
     <div class="alert alert-secondary flex flex-col md:flex-row items-center justify-between gap-3 border-2 border-gray-300 shadow-sm" role="alert" style="font-size:1.08rem;">
       <div>
         <strong>Prefer the command line?</strong>
         <span class="badge bg-secondary ms-2">CLI version v1.0.0</span> is also available.
         <span class="bg-light px-2 py-1 rounded border d-inline-block mt-1 ms-2" style="font-family:monospace;">
-          bun run main.ts --help
+          bun run start --help
         </span>
       </div>
       <div>
@@ -361,7 +178,6 @@
   <footer class="w-full bg-light border-t py-4 mt-12">
     <div class="container text-center text-muted small">
       <div>Copyright © 2025 Shawn Lin</div>
-      <div>Author: Shawn Lin</div>
       <div>Version: v1.0.0</div>
       <div>
         <a href="https://github.com/shdennlin/pdf-background-changer" class="link-primary me-3" target="_blank" rel="noopener">GitHub</a>

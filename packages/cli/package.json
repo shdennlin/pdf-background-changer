@@ -1,0 +1,23 @@
+{
+  "name": "@pdf-background-changer/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "src/main.ts",
+  "bin": {
+    "pdf-bg-change": "dist/main.js"
+  },
+  "scripts": {
+    "start": "bun run src/main.ts",
+    "build": "bun build ./src/main.ts --outdir ./dist"
+  },
+  "dependencies": {
+    "@pdf-background-changer/lib": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

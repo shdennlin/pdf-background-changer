@@ -1,16 +1,22 @@
 {
   "name": "pdf-background-changer",
   "version": "v1.0.0",
-  "module": "index.ts",
   "type": "module",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "bun run packages/cli/src/main.ts",
+    "build:lib": "bun run --cwd packages/lib build",
+    "build:cli": "bun run --cwd packages/cli build",
+    "build:frontend": "bun run --cwd packages/frontend build",
+    "build": "bun run build:lib && bun run build:cli && bun run build:frontend",
+    "dev:frontend": "bun run --cwd packages/frontend dev",
+    "serve:frontend": "bun run --cwd packages/frontend serve"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
+    "@types/bun": "latest",
     "typescript": "^5"
-  },
-  "dependencies": {
-    "pdf-lib": "^1.17.1"
   }
 }

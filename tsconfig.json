@@ -22,6 +22,25 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
-  }
+    "noPropertyAccessFromIndexSignature": false,
+
+    // Enable declaration files for library
+    "declaration": true,
+    
+    // Workspace configuration
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@pdf-background-changer/lib/*": ["packages/lib/src/*"],
+      "@pdf-background-changer/cli/*": ["packages/cli/src/*"],
+      "@pdf-background-changer/frontend/*": ["packages/frontend/src/*"]
+    }
+  },
+  "references": [
+    { "path": "./packages/lib" },
+    { "path": "./packages/cli" },
+    { "path": "./packages/frontend" }
+  ],
+  "files": [],
+  "exclude": ["node_modules", "dist"]
 }

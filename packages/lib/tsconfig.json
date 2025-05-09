@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // Make sure module and moduleResolution match
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
+    "declaration": true,
+    // Fix conflicting settings - can't use allowImportingTsExtensions without noEmit or emitDeclarationOnly
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*.ts"],
+  "references": []
+}

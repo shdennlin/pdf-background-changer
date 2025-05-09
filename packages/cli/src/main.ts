@@ -1,35 +1,29 @@
-// convert-pdf-bg.ts
+/**
+ * PDF Background Changer CLI tool
+ */
 import { readFileSync, writeFileSync } from "fs";
-import { PDFDocument, rgb, BlendMode } from "pdf-lib";
+import type { PDFProcessingOptions } from "../../lib/src/index.ts";
+import {
+  processPdfWithProgress,
+  APP_NAME,
+  APP_VERSION
+} from "../../lib/src/index.ts";
 
-// Convert hex to rgb
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const bigint = parseInt(hex.replace("#", ""), 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return { r, g, b };
-}
-
+/**
+ * Process a PDF file from the filesystem
+ */
 async function changePdfBackground(inputPath: string, outputPath: string, colorHex: string) {
+  // Read the input file
   const pdfBytes = readFileSync(inputPath);
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-  const pages = pdfDoc.getPages();
-  const { r, g, b } = hexToRgb(colorHex);
-
-  for (const page of pages) {
-    const { width, height } = page.getSize();
-    page.drawRectangle({
-      x: 0,
-      y: 0,
-      width,
-      height,
-      color: rgb(r / 255, g / 255, b / 255),
-      blendMode: BlendMode.Multiply,
-    });
-  }
-
-  const modifiedPdf = await pdfDoc.save();
+  
+  // Process the PDF with our shared library
+  const options: PDFProcessingOptions = {
+    colorHex: colorHex
+  };
+  
+  const modifiedPdf = await processPdfWithProgress(pdfBytes, options);
+  
+  // Write the output file
   writeFileSync(outputPath, modifiedPdf);
 }
 
@@ -40,8 +34,11 @@ async function changePdfBackground(inputPath: string, outputPath: string, colorH
  *   bun run main.ts input.pdf output.pdf "#B8C7AE"
  */
 
+/**
+ * Print help information and exit
+ */
 function printHelpAndExit() {
-  console.log(`PDF Background Changer version 1.0.0
+  console.log(`${APP_NAME} ${APP_VERSION}
 
 Usage: bun run main.ts <input.pdf> <output.pdf> <backgroundColor>
 Example:
@@ -64,7 +61,7 @@ if (require.main === module) {
     printHelpAndExit();
   }
   if (process.argv.includes("-v") || process.argv.includes("--version")) {
-    console.log("v1.0.0");
+    console.log(APP_VERSION);
     process.exit(0);
   }
   const [,, inputPath, outputPath, colorHex] = process.argv;
